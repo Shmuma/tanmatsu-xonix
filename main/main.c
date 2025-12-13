@@ -51,7 +51,15 @@ void app_main(void) {
     ESP_ERROR_CHECK(res);
 
     // Initialize the Board Support Package
-    ESP_ERROR_CHECK(bsp_device_initialize());
+    const bsp_configuration_t bsp_configuration = {
+        .display =
+        {
+            //.requested_color_format = LCD_COLOR_PIXEL_FORMAT_RGB565,
+            .requested_color_format = display_color_format,
+            .num_fbs                = 1,
+        },
+    };
+    ESP_ERROR_CHECK(bsp_device_initialize(&bsp_configuration));
 
     uint8_t led_data[] = {
         0xFF, 0x00, 0x00, 0x00, 0xFF, 0x00, 0x00, 0x00, 0xFF, 0xFF, 0xFF, 0x00, 0x00, 0xFF, 0xFF, 0xFF, 0x00, 0xFF,

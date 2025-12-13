@@ -18,3 +18,4 @@ sdkconfig*
 .submodules_update_done
 badgelink
 sdkconfig_*
+.idea
