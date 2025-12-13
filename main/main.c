@@ -18,6 +18,8 @@
 #include "wifi_connection.h"
 #include "wifi_remote.h"
 
+#include "xonix.h"
+
 // Constants
 static char const TAG[] = "main";
 
@@ -28,6 +30,7 @@ static lcd_color_rgb_pixel_format_t display_color_format = LCD_COLOR_PIXEL_FORMA
 static lcd_rgb_data_endian_t        display_data_endian  = LCD_RGB_DATA_ENDIAN_LITTLE;
 static pax_buf_t                    fb                   = {0};
 static QueueHandle_t                input_event_queue    = NULL;
+static xonix_state_t                xonix_state;
 
 void blit(void) {
     bsp_display_blit(0, 0, display_h_res, display_v_res, pax_buf_get_pixels(&fb));
@@ -55,11 +58,6 @@ void app_main(void) {
         },
     };
     ESP_ERROR_CHECK(bsp_device_initialize(&bsp_configuration));
-
-    uint8_t led_data[] = {
-        0xFF, 0x00, 0x00, 0x00, 0xFF, 0x00, 0x00, 0x00, 0xFF, 0xFF, 0xFF, 0x00, 0x00, 0xFF, 0xFF, 0xFF, 0x00, 0xFF,
-    };
-    bsp_led_write(led_data, sizeof(led_data));
 
     // Get display parameters and rotation
     res = bsp_display_get_parameters(&display_h_res, &display_v_res, &display_color_format, &display_data_endian);
@@ -102,6 +100,8 @@ void app_main(void) {
     pax_buf_reversed(&fb, display_data_endian == LCD_RGB_DATA_ENDIAN_BIG);
     pax_buf_set_orientation(&fb, orientation);
 
+    xonix_init(&xonix_state, display_h_res, display_v_res);
+
 #define BLACK 0xFF000000
 #define WHITE 0xFFFFFFFF
 #define RED   0xFFFF0000
@@ -125,7 +125,6 @@ void app_main(void) {
     while (1) {
         bsp_input_event_t event;
         if (xQueueReceive(input_event_queue, &event, portMAX_DELAY) == pdTRUE) {
-            bsp_led_write(led_data, sizeof(led_data));
             switch (event.type) {
                 case INPUT_EVENT_TYPE_KEYBOARD: {
                     if (event.args_keyboard.ascii != '\b' ||
