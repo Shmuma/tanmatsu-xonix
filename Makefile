@@ -1,4 +1,6 @@
 PORT ?= /dev/ttyACM0
+# mac os
+PORT = /dev/cu.usbmodem*
 
 IDF_PATH ?= $(shell cat .IDF_PATH 2>/dev/null || echo `pwd`/esp-idf)
 IDF_TOOLS_PATH ?= $(shell cat .IDF_TOOLS_PATH 2>/dev/null || echo `pwd`/esp-idf-tools)
