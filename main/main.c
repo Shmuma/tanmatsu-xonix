@@ -24,16 +24,11 @@
 static char const TAG[] = "main";
 
 // Global variables
-static size_t                       display_h_res        = 0;
-static size_t                       display_v_res        = 0;
-static lcd_color_rgb_pixel_format_t display_color_format = LCD_COLOR_PIXEL_FORMAT_RGB565;
-static lcd_rgb_data_endian_t        display_data_endian  = LCD_RGB_DATA_ENDIAN_LITTLE;
-static pax_buf_t                    fb                   = {0};
 static QueueHandle_t                input_event_queue    = NULL;
-static xonix_state_t                xonix_state;
+static xonix_state_t                xonix_state = {0};
 
 void blit(void) {
-    bsp_display_blit(0, 0, display_h_res, display_v_res, pax_buf_get_pixels(&fb));
+    bsp_display_blit(0, 0, xonix_state.screen_w, xonix_state.screen_h, pax_buf_get_pixels(&xonix_state.fb));
 }
 
 void app_main(void) {
@@ -48,59 +43,7 @@ void app_main(void) {
     }
     ESP_ERROR_CHECK(res);
 
-    // Initialize the Board Support Package
-    const bsp_configuration_t bsp_configuration = {
-        .display =
-        {
-            //.requested_color_format = LCD_COLOR_PIXEL_FORMAT_RGB565,
-            .requested_color_format = display_color_format,
-            .num_fbs                = 1,
-        },
-    };
-    ESP_ERROR_CHECK(bsp_device_initialize(&bsp_configuration));
-
-    // Get display parameters and rotation
-    res = bsp_display_get_parameters(&display_h_res, &display_v_res, &display_color_format, &display_data_endian);
-    ESP_ERROR_CHECK(res);  // Check that the display parameters have been initialized
-    bsp_display_rotation_t display_rotation = bsp_display_get_default_rotation();
-
-    // Convert ESP-IDF color format into PAX buffer type
-    pax_buf_type_t format = PAX_BUF_24_888RGB;
-    switch (display_color_format) {
-        case LCD_COLOR_PIXEL_FORMAT_RGB565:
-            format = PAX_BUF_16_565RGB;
-            break;
-        case LCD_COLOR_PIXEL_FORMAT_RGB888:
-            format = PAX_BUF_24_888RGB;
-            break;
-        default:
-            break;
-    }
-
-    // Convert BSP display rotation format into PAX orientation type
-    pax_orientation_t orientation = PAX_O_UPRIGHT;
-    switch (display_rotation) {
-        case BSP_DISPLAY_ROTATION_90:
-            orientation = PAX_O_ROT_CCW;
-            break;
-        case BSP_DISPLAY_ROTATION_180:
-            orientation = PAX_O_ROT_HALF;
-            break;
-        case BSP_DISPLAY_ROTATION_270:
-            orientation = PAX_O_ROT_CW;
-            break;
-        case BSP_DISPLAY_ROTATION_0:
-        default:
-            orientation = PAX_O_UPRIGHT;
-            break;
-    }
-
-    // Initialize graphics stack
-    pax_buf_init(&fb, NULL, display_h_res, display_v_res, format);
-    pax_buf_reversed(&fb, display_data_endian == LCD_RGB_DATA_ENDIAN_BIG);
-    pax_buf_set_orientation(&fb, orientation);
-
-    xonix_init(&xonix_state, display_h_res, display_v_res);
+    xonix_init(&xonix_state);
 
 #define BLACK 0xFF000000
 #define WHITE 0xFFFFFFFF
@@ -118,8 +61,8 @@ void app_main(void) {
     // If you want to run something at an interval in this same main thread you can replace portMAX_DELAY with an amount
     // of ticks to wait, for example pdMS_TO_TICKS(1000)
 
-    pax_background(&fb, BLACK);
-    pax_draw_text(&fb, RED, pax_font_sky_mono, 16, 0, 0, "Welcome! Press any key to trigger an event.");
+    pax_background(&xonix_state.fb, BLACK);
+    pax_draw_text(&xonix_state.fb, RED, pax_font_sky_mono, 16, 0, 0, "Welcome! Press any key to trigger an event.");
     blit();
 
     while (1) {
@@ -131,16 +74,16 @@ void app_main(void) {
                         event.args_keyboard.ascii != '\t') {  // Ignore backspace & tab keyboard events
                         ESP_LOGI(TAG, "Keyboard event %c (%02x) %s", event.args_keyboard.ascii,
                                  (uint8_t)event.args_keyboard.ascii, event.args_keyboard.utf8);
-                        pax_simple_rect(&fb, WHITE, 0, 0, pax_buf_get_width(&fb), 72);
-                        pax_draw_text(&fb, BLACK, pax_font_sky_mono, 16, 0, 0, "Keyboard event");
+                        pax_simple_rect(&xonix_state.fb, WHITE, 0, 0, pax_buf_get_width(&xonix_state.fb), 72);
+                        pax_draw_text(&xonix_state.fb, BLACK, pax_font_sky_mono, 16, 0, 0, "Keyboard event");
                         char text[64];
                         snprintf(text, sizeof(text), "ASCII:     %c (0x%02x)", event.args_keyboard.ascii,
                                  (uint8_t)event.args_keyboard.ascii);
-                        pax_draw_text(&fb, BLACK, pax_font_sky_mono, 16, 0, 18, text);
+                        pax_draw_text(&xonix_state.fb, BLACK, pax_font_sky_mono, 16, 0, 18, text);
                         snprintf(text, sizeof(text), "UTF-8:     %s", event.args_keyboard.utf8);
-                        pax_draw_text(&fb, BLACK, pax_font_sky_mono, 16, 0, 36, text);
+                        pax_draw_text(&xonix_state.fb, BLACK, pax_font_sky_mono, 16, 0, 36, text);
                         snprintf(text, sizeof(text), "Modifiers: 0x%0" PRIX32, event.args_keyboard.modifiers);
-                        pax_draw_text(&fb, BLACK, pax_font_sky_mono, 16, 0, 54, text);
+                        pax_draw_text(&xonix_state.fb, BLACK, pax_font_sky_mono, 16, 0, 54, text);
                         blit();
                     }
                     break;
@@ -159,38 +102,38 @@ void app_main(void) {
                         bsp_input_set_backlight_brightness(100);
                     }
 
-                    pax_simple_rect(&fb, WHITE, 0, 100, pax_buf_get_width(&fb), 72);
-                    pax_draw_text(&fb, BLACK, pax_font_sky_mono, 16, 0, 100 + 0, "Navigation event");
+                    pax_simple_rect(&xonix_state.fb, WHITE, 0, 100, pax_buf_get_width(&xonix_state.fb), 72);
+                    pax_draw_text(&xonix_state.fb, BLACK, pax_font_sky_mono, 16, 0, 100 + 0, "Navigation event");
                     char text[64];
                     snprintf(text, sizeof(text), "Key:       0x%0" PRIX32, (uint32_t)event.args_navigation.key);
-                    pax_draw_text(&fb, BLACK, pax_font_sky_mono, 16, 0, 100 + 18, text);
+                    pax_draw_text(&xonix_state.fb, BLACK, pax_font_sky_mono, 16, 0, 100 + 18, text);
                     snprintf(text, sizeof(text), "State:     %s", event.args_navigation.state ? "pressed" : "released");
-                    pax_draw_text(&fb, BLACK, pax_font_sky_mono, 16, 0, 100 + 36, text);
+                    pax_draw_text(&xonix_state.fb, BLACK, pax_font_sky_mono, 16, 0, 100 + 36, text);
                     snprintf(text, sizeof(text), "Modifiers: 0x%0" PRIX32, event.args_navigation.modifiers);
-                    pax_draw_text(&fb, BLACK, pax_font_sky_mono, 16, 0, 100 + 54, text);
+                    pax_draw_text(&xonix_state.fb, BLACK, pax_font_sky_mono, 16, 0, 100 + 54, text);
                     blit();
                     break;
                 }
                 case INPUT_EVENT_TYPE_ACTION: {
                     ESP_LOGI(TAG, "Action event 0x%0" PRIX32 ": %s", (uint32_t)event.args_action.type,
                              event.args_action.state ? "yes" : "no");
-                    pax_simple_rect(&fb, WHITE, 0, 200 + 0, pax_buf_get_width(&fb), 72);
-                    pax_draw_text(&fb, BLACK, pax_font_sky_mono, 16, 0, 200 + 0, "Action event");
+                    pax_simple_rect(&xonix_state.fb, WHITE, 0, 200 + 0, pax_buf_get_width(&xonix_state.fb), 72);
+                    pax_draw_text(&xonix_state.fb, BLACK, pax_font_sky_mono, 16, 0, 200 + 0, "Action event");
                     char text[64];
                     snprintf(text, sizeof(text), "Type:      0x%0" PRIX32, (uint32_t)event.args_action.type);
-                    pax_draw_text(&fb, BLACK, pax_font_sky_mono, 16, 0, 200 + 36, text);
+                    pax_draw_text(&xonix_state.fb, BLACK, pax_font_sky_mono, 16, 0, 200 + 36, text);
                     snprintf(text, sizeof(text), "State:     %s", event.args_action.state ? "yes" : "no");
-                    pax_draw_text(&fb, BLACK, pax_font_sky_mono, 16, 0, 200 + 54, text);
+                    pax_draw_text(&xonix_state.fb, BLACK, pax_font_sky_mono, 16, 0, 200 + 54, text);
                     blit();
                     break;
                 }
                 case INPUT_EVENT_TYPE_SCANCODE: {
                     ESP_LOGI(TAG, "Scancode event 0x%0" PRIX32, (uint32_t)event.args_scancode.scancode);
-                    pax_simple_rect(&fb, WHITE, 0, 300 + 0, pax_buf_get_width(&fb), 72);
-                    pax_draw_text(&fb, BLACK, pax_font_sky_mono, 16, 0, 300 + 0, "Scancode event");
+                    pax_simple_rect(&xonix_state.fb, WHITE, 0, 300 + 0, pax_buf_get_width(&xonix_state.fb), 72);
+                    pax_draw_text(&xonix_state.fb, BLACK, pax_font_sky_mono, 16, 0, 300 + 0, "Scancode event");
                     char text[64];
                     snprintf(text, sizeof(text), "Scancode:  0x%0" PRIX32, (uint32_t)event.args_scancode.scancode);
-                    pax_draw_text(&fb, BLACK, pax_font_sky_mono, 16, 0, 300 + 36, text);
+                    pax_draw_text(&xonix_state.fb, BLACK, pax_font_sky_mono, 16, 0, 300 + 36, text);
                     blit();
                     break;
                 }
