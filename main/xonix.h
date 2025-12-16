@@ -13,7 +13,8 @@ typedef struct {
     size_t       screen_w, screen_h;
     pax_buf_t    fb;
     size_t       field_h, field_w;
-    size_t       mask_len;
+    // length of one row in bytes
+    size_t       row_bytes;
     // bitmask representation of cells in the field
     uint8_t      *field;
     // bitmasked representation of hot area we're currently trying to capture
@@ -21,13 +22,13 @@ typedef struct {
 
     // enemies
     uint8_t enemies_count;
-    uint8_t enemies_x[ENEMIES_MAX];
-    uint8_t enemies_y[ENEMIES_MAX];
+    size_t enemies_x[ENEMIES_MAX];
+    size_t enemies_y[ENEMIES_MAX];
     uint8_t enemies_d[ENEMIES_MAX];
 
     // player
-    uint8_t player_x;
-    uint8_t player_y;
+    size_t player_x;
+    size_t player_y;
     int8_t player_dx;
     int8_t player_dy;
     uint8_t player_hot;

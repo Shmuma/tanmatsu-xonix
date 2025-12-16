@@ -7,9 +7,10 @@
 static char const TAG[] = "xonix";
 
 #define BLACK 0xFF000000
+#define GREEN 0xFF00FF00
 
 
-// initialize xonix game
+// initialize xonix game state
 void xonix_init(xonix_state_t *state)
 {
     esp_err_t res;
@@ -75,9 +76,9 @@ void xonix_init(xonix_state_t *state)
     state->screen_h = screen_h;
     state->field_w = screen_w / CELL_SIZE;
     state->field_h = screen_h / CELL_SIZE;
-    state->mask_len = (state->field_w * state->field_h) >> 8;
-    state->field = malloc(state->mask_len);
-    state->hot_field = malloc(state->mask_len);
+    state->row_bytes = state->field_w >> 3;
+    state->field = malloc(state->row_bytes * state->field_h);
+    state->hot_field = malloc(state->row_bytes * state->field_h);
 
     // reset field
     // reset hot area
@@ -111,7 +112,7 @@ void xonix_reset_state(xonix_state_t *state, uint8_t level)
 
 
 inline void clear_hot(xonix_state_t *state) {
-    memset(state->hot_field, 0, state->mask_len);
+    memset(state->hot_field, 0, state->row_bytes * state->field_h);
 }
 
 
@@ -124,12 +125,61 @@ void xonix_init_enemies(xonix_state_t *state, uint8_t level)
 }
 
 
+static void draw_row(pax_buf_t* fb, size_t row, uint8_t* row_data, uint8_t row_len, pax_col_t color)
+{
+    uint16_t col_start = 0, col_end;
+    uint8_t byte_ofs, bit_ofs;
+    bool start_found = false;
+
+    // find first set bit at or after col_start
+    while (true) {
+        byte_ofs = col_start >> 3;
+        bit_ofs = col_start % 8;
+        if (byte_ofs > row_len)
+            break;
+        if (row_data[byte_ofs] & (1 << bit_ofs)) {
+            start_found = true;
+            break;
+        }
+        col_start++;
+    }
+
+    if (!start_found) {
+        ESP_LOGI(TAG, "%" PRIu32 ": not found, exit", row);
+        return;
+    }
+
+    // find first not set bit after col_start
+    col_end = col_start+1;
+    while (true) {
+        byte_ofs = col_end >> 3;
+        bit_ofs = col_end % 8;
+        if (byte_ofs > row_len)
+            break;
+        if ((row_data[byte_ofs] & (1 << bit_ofs)) == 0)
+            break;
+        col_end++;
+    }
+
+    // fill the rectangle from col_start to col_end-1
+    ESP_LOGI(TAG, "%" PRIu32 ": Draw %" PRIu16 " - %" PRIu16,
+             row, col_start, col_end);
+
+    // todo: need to repeat the search further
+}
+
+
 // Very simple version redrawing everything
 void xonix_draw(xonix_state_t *state)
 {
+    size_t row;
     pax_background(&state->fb, BLACK);
 
     // draw the field
+    for (row = 0; row < state->field_h; row++) {
+        draw_row(&state->fb, row, state->field + row*state->row_bytes, state->row_bytes, GREEN);
+    }
+
     // draw hot area
     // draw player
     // draw enemies

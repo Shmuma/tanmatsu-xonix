@@ -58,10 +58,11 @@ void app_main(void) {
     // If you want to run something at an interval in this same main thread you can replace portMAX_DELAY with an amount
     // of ticks to wait, for example pdMS_TO_TICKS(1000)
 
+/*
     pax_background(&xonix_state.fb, BLACK);
     pax_draw_text(&xonix_state.fb, RED, pax_font_sky_mono, 16, 0, 0, "Welcome! Press any key to trigger an event.");
     blit();
-
+*/
     while (1) {
         bsp_input_event_t event;
         if (xQueueReceive(input_event_queue, &event, portMAX_DELAY) == pdTRUE) {
