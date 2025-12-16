@@ -18,7 +18,7 @@
 #include "xonix.h"
 
 // Constants
-//static char const TAG[] = "main";
+static char const TAG[] = "main";
 
 // Global variables
 static QueueHandle_t                input_event_queue    = NULL;
@@ -63,11 +63,10 @@ void app_main(void) {
     blit();
 
     while (1) {
-    }
-/*
         bsp_input_event_t event;
         if (xQueueReceive(input_event_queue, &event, portMAX_DELAY) == pdTRUE) {
             switch (event.type) {
+/*
                 case INPUT_EVENT_TYPE_KEYBOARD: {
                     if (event.args_keyboard.ascii != '\b' ||
                         event.args_keyboard.ascii != '\t') {  // Ignore backspace & tab keyboard events
@@ -87,6 +86,7 @@ void app_main(void) {
                     }
                     break;
                 }
+*/
                 case INPUT_EVENT_TYPE_NAVIGATION: {
                     ESP_LOGI(TAG, "Navigation event %0" PRIX32 ": %s", (uint32_t)event.args_navigation.key,
                              event.args_navigation.state ? "pressed" : "released");
@@ -100,7 +100,7 @@ void app_main(void) {
                     if (event.args_navigation.key == BSP_INPUT_NAVIGATION_KEY_F3) {
                         bsp_input_set_backlight_brightness(100);
                     }
-
+/*
                     pax_simple_rect(&xonix_state.fb, WHITE, 0, 100, pax_buf_get_width(&xonix_state.fb), 72);
                     pax_draw_text(&xonix_state.fb, BLACK, pax_font_sky_mono, 16, 0, 100 + 0, "Navigation event");
                     char text[64];
@@ -111,8 +111,10 @@ void app_main(void) {
                     snprintf(text, sizeof(text), "Modifiers: 0x%0" PRIX32, event.args_navigation.modifiers);
                     pax_draw_text(&xonix_state.fb, BLACK, pax_font_sky_mono, 16, 0, 100 + 54, text);
                     blit();
+*/
                     break;
                 }
+/*
                 case INPUT_EVENT_TYPE_ACTION: {
                     ESP_LOGI(TAG, "Action event 0x%0" PRIX32 ": %s", (uint32_t)event.args_action.type,
                              event.args_action.state ? "yes" : "no");
@@ -136,9 +138,10 @@ void app_main(void) {
                     blit();
                     break;
                 }
+*/
                 default:
                     break;
             }
         }
-    }*/
+    }
 }
