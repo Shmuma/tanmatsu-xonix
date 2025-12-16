@@ -6,6 +6,8 @@
 
 static char const TAG[] = "xonix";
 
+#define BLACK 0xFF000000
+
 
 // initialize xonix game
 void xonix_init(xonix_state_t *state)
@@ -73,12 +75,65 @@ void xonix_init(xonix_state_t *state)
     state->screen_h = screen_h;
     state->field_w = screen_w / CELL_SIZE;
     state->field_h = screen_h / CELL_SIZE;
-    state->field = malloc((state->field_w * state->field_h) >> 8);
+    state->mask_len = (state->field_w * state->field_h) >> 8;
+    state->field = malloc(state->mask_len);
+    state->hot_field = malloc(state->mask_len);
+
+    // reset field
+    // reset hot area
+    // reset players and enemies position
+    // draw the board
+    xonix_reset_state(state, 1);
+    xonix_draw(state);
 }
 
 
 void xonix_deinit(xonix_state_t *state)
 {
     free(state->field);
+    free(state->hot_field);
     state->field = NULL;
 }
+
+
+void xonix_reset_state(xonix_state_t *state, uint8_t level)
+{
+    xonix_init_enemies(state, level);
+
+    state->player_x = state->field_w >> 1;
+    state->player_y = 0;
+    state->player_dx = 0;
+    state->player_dy = 0;
+    state->player_hot = 0;
+    state->player_lives = MAX_LIVES;
+    state->player_area = 0;
+}
+
+
+inline void clear_hot(xonix_state_t *state) {
+    memset(state->hot_field, 0, state->mask_len);
+}
+
+
+void xonix_init_enemies(xonix_state_t *state, uint8_t level)
+{
+    state->enemies_count = level;
+    state->enemies_x[0] = state->field_w >> 1;
+    state->enemies_y[0] = state->field_h >> 1;
+    state->enemies_d[0] = 0;
+}
+
+
+// Very simple version redrawing everything
+void xonix_draw(xonix_state_t *state)
+{
+    pax_background(&state->fb, BLACK);
+
+    // draw the field
+    // draw hot area
+    // draw player
+    // draw enemies
+
+    bsp_display_blit(0, 0, state->screen_w, state->screen_h, pax_buf_get_pixels(&state->fb));
+}
+

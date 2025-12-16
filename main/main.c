@@ -9,19 +9,16 @@
 #include "esp_lcd_panel_ops.h"
 #include "esp_lcd_types.h"
 #include "esp_log.h"
-#include "hal/lcd_types.h"
 #include "nvs_flash.h"
 #include "pax_fonts.h"
 #include "pax_gfx.h"
 #include "pax_text.h"
 #include "portmacro.h"
-#include "wifi_connection.h"
-#include "wifi_remote.h"
 
 #include "xonix.h"
 
 // Constants
-static char const TAG[] = "main";
+//static char const TAG[] = "main";
 
 // Global variables
 static QueueHandle_t                input_event_queue    = NULL;
@@ -66,6 +63,8 @@ void app_main(void) {
     blit();
 
     while (1) {
+    }
+/*
         bsp_input_event_t event;
         if (xQueueReceive(input_event_queue, &event, portMAX_DELAY) == pdTRUE) {
             switch (event.type) {
@@ -141,5 +140,5 @@ void app_main(void) {
                     break;
             }
         }
-    }
+    }*/
 }
