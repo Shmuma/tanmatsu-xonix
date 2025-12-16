@@ -70,7 +70,11 @@ void xonix_init(xonix_state_t *state)
     pax_buf_init(&state->fb, NULL, screen_w, screen_h, format);
     pax_buf_reversed(&state->fb, display_data_endian == LCD_RGB_DATA_ENDIAN_BIG);
     pax_buf_set_orientation(&state->fb, orientation);
-    ESP_LOGI(TAG, "Display %" PRIu32 "x%" PRIu32, screen_w, screen_h);
+
+    // retrieve buffer parameters
+    screen_w = pax_buf_get_width(&state->fb);
+    screen_h = pax_buf_get_height(&state->fb);
+    ESP_LOGI(TAG, "Buf %" PRIu32 "x%" PRIu32, screen_w, screen_h);
 
     state->screen_w = screen_w;
     state->screen_h = screen_h;
